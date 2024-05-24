@@ -1,8 +1,55 @@
 import numpy as np
 data = np.array([[1,2,3], [2,4,6], [3,6,9]])# row wise data, 3rd column is output value
 
-def normalize(inputs):
-  pass
+def normalize(inputs, outputs, type_of_normalization):
+  """
+  ndarray (m,n) inputs: The predictor values.
+  ndarray (m,1) outputs: Predictand value.
+  str type_of_normalization: Describes the kind of normalization to be applied
+                             to the inputs and outputs.
+                             Possible types: min_max, z_score (to be added soon).
+  :return: normalized input and output values.
+  """
+  x = inputs.transpose()
+  y = outputs.transpose()
+
+  if type_of_normalization == "min_max":
+
+    min_values = np.array([[np.min(i)] for i in x] )
+    max_values = np.array([[np.max(i)] for i in x] )
+    normalized_inputs = (x - min_values) / (max_values - min_values)
+    normalized_inputs = normalized_inputs.transpose()
+    term1 = min_output = np.min(y[0])
+    term2 = max_output = np.max(y[0])
+    normalized_outputs = (y - min_output)/(max_output - min_output)
+    normalized_outputs = normalized_outputs.transpose()
+    # need to also return min and mac values for de normalization
+
+  elif type_of_normalization == "z_score":
+    mean = np.reshape(np.mean(inputs, axis = 0), (len(inputs[0],1))) # finding column wise means
+    stds = np.reshape(np.std(inputs, axis = 0), (len(inputs[0],1)))
+    term1 = mean_output = np.mean(outputs, axis = 0) # finding column wise means
+    term2 = stds_output = np.std(outputs, axis = 0)
+    normalized_inputs = (x - mean)/stds
+    normalized_outputs = (y-mean_output)/stds_output
+
+  return normalized_inputs, normalized_outputs,[term1, term2]
+
+def denormalize(outputs, term1, term2, type_of_deormalization):
+  """
+  ndarray (m,1) outputs: Predicted outputs that have to be brought back to
+                         the main form so as to prit out the prediction.
+  float term1: Either the min value or the mean.
+  float term2: Either the max value or the standard deviation.
+  str type_of_denormalization: Type of denormalization that has to be done -min_max or z_score
+  :return: ndarray of denormalized values.
+  """
+  if type_of_denormalization == "min_max":
+    result = outputs * (term2 - term1) + term1
+  elif type_of_denormalization == "z_score":
+    result = output * term2 + term1
+  return result
+
 def initialize_weights(row):
   """
   row: one row of predictor values of the data.
@@ -105,6 +152,21 @@ def epochs(input, actual_output, threshold=0.1):
     previous_error = error
   return weights # returning the most efficient weights to use later for prediction.
 
+def predict(inputs, actual_output, type_of_normalization, weights, ):
+  """
+  ndarray (m,n) inputs: The predictor values.
+  ndarray (m,1) outputs: Predictand value.
+  str type_of_normalization: Describes the kind of normalization to be applied
+                             to the inputs and outputs.
+                             Possible types: min_max, z_score (to be added soon).
+  :return: ndarray of predicted outputs
+  """
+  inputs, actual_output,terms = normalize(inputs, actual_output, type_of_normalization)
+  predicted_output = forward_pass(inputs, weights)
+  error = calculate_error(predicted_output, actual_output)
+  print("error:", error)
+  predicted_output_denormalized = denormalize(predicted_output, terms[0], terms[1], type_of_deormalization)
+  return predicted_output_denormalized
 
 if __name__ == "__main__":
 
