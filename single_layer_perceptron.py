@@ -154,6 +154,33 @@ def change_weights(delw, weights):
   new_weights = np.subtract(weights, delw)
   return new_weights
 
+def calculate_rsquare(predicted_output, actual_output, num_of_predictor_variables, mean_of_output = "default", adjusted_r2 = False):
+    """
+    This function calculates the R squared value. r^2 = SSR/SST (where SSR = Sum of Squares Regression, SST = Sum of squares Total).
+    R^2_ADJUSTED = 1 - (1-r^2).(num_of_records - 1)/(num_of_records - num_of_predictors - 1)
+
+    ndarray (m,1) predicted_outputs: outputs predicted by the model.
+    ndarray (m,1) actual_outputs: the predicatand values in the original data.
+    integer num_of_predictor_variables: The number of predictors.
+    float mean_of_output: The mean of the actual output values. If it is "default", then the mean has to be calculated. Otherwise it is passed.
+    Boolean adjusted_r2: Should r square be adjusted or not.
+    :return: a float with the accuracy value between 0 and 1.
+    """
+    if mean_of_output == "default":
+      mean_of_output = np.mean(actual_output, axis = 0) # finding column wise mean
+
+    SST = np.sum(np.square(actual_output-mean_of_output))
+    SSR = np.sum(np.square(predicted_output - mean_of_output))
+    r2 = SSR/SST
+    #print("regular r2:", r2)
+    
+    # adjusted r2 currently does not work. Need to study it again to understand the issue.
+    if adjusted_r2:
+      n = len(actual_output)
+      r2 = 1 - ((1-r2)*(n-1)/(n-num_of_predictor_variables - 1)) # need to study more on why this formula works
+
+    return r2
+
 def epochs(input, actual_output, threshold=0.1):
   """
   np.array(m,n) input
@@ -168,11 +195,15 @@ def epochs(input, actual_output, threshold=0.1):
   epch = 1
   difference = 10000
   previous_error = 0
+  num_of_predictor_variables = len(input)
+  print("number of Variables:", num_of_predictor_variables)
   while (-threshold > difference or difference > threshold):
     print("Epoch number:", epch)
     predicted_output = forward_pass(input, weights)
     error = calculate_error(predicted_output, actual_output)
     print("error:", error)
+    r2 = calculate_rsquare(predicted_output, actual_output, num_of_predictor_variables)#, adjusted_r2 = True) will use it later, there is some isue with the formula.
+    print("Rsquared:", r2)
     delw = backward_pass(input, predicted_output, actual_output)
     weights = change_weights(delw, weights) # changing weights to the new values of weights.
     #print("weights:", weights)
@@ -199,6 +230,7 @@ def predict(inputs, actual_output, type_of_normalization, weights, ):
   print("error:", error)
   predicted_output_denormalized = denormalize(predicted_output, terms[0], terms[1], type_of_deormalization)
   return predicted_output_denormalized
+
 
 if __name__ == "__main__":
 
